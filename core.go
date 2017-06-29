@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"errors"
 	"strings"
+	"time"
 )
 
 type SeleniumConfiguration struct {
 	Host string `json:"host"`
 	Port string `json:"port"`
 	Concurrency int `json:"concurrency"`
+	ImplicitWaitTimeout int `json:"implicit-wait-timeout"`
 	Capabilities selenium.Capabilities `json:"capabilities"`
 }
 
@@ -40,11 +42,21 @@ func NewDriver(se SeleniumConfiguration) (selenium.WebDriver, error) {
 		se.Capabilities,
 		server)
 
+	implicit_wait_timeout, err := time.ParseDuration(fmt.Sprintf(
+		`%ds`, se.ImplicitWaitTimeout,
+	))
 	if err != nil {
+		driver.Quit()
 		return nil, err
-	} else {
-		return driver, nil
 	}
+
+	err = driver.SetImplicitWaitTimeout(implicit_wait_timeout)
+	if err != nil {
+		driver.Quit()
+		return nil, err
+	}
+
+	return driver, nil
 
 }
 
