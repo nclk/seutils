@@ -3,6 +3,7 @@ package seutils
 import (
 	"encoding/json"
 	"github.com/nclk/selenium"
+	//"github.com/tebeka/selenium"
 	"fmt"
 	"errors"
 	"strings"
@@ -109,7 +110,7 @@ func CheckCSSProperty(
 			label, property, value, attr,
 		))
 	}
-	close(done_chan)
+	done_chan <- true
 }
 
 func CheckAttribute(
@@ -130,7 +131,7 @@ func CheckAttribute(
 			))
 		}
 	}
-	close(done_chan)
+	done_chan <- true
 }
 
 func GetAttribute(
