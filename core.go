@@ -2,7 +2,7 @@ package seutils
 
 import (
 	"encoding/json"
-	"github.com/tebeka/selenium"
+	"github.com/nclk/selenium"
 	"fmt"
 	"errors"
 	"strings"
