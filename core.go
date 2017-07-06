@@ -72,10 +72,35 @@ func QuerySelector(
 ) {
 	el, err := driver.FindElement(selenium.ByCSSSelector, selector)
 	if err != nil {
-		err_chan <- err
+		err_chan <- errors.New(fmt.Sprintf(
+			`Finding "%s": %s`, selector, err.Error(),
+		))
 		close(el_chan)
 	} else {
 		el_chan <- el
+	}
+}
+
+func QuerySelectorAll(
+	driver interface{
+		FindElements(string, string) ([]selenium.WebElement, error)
+	},
+	by string,
+	selector string,
+	el_chan chan selenium.WebElement,
+	err_chan chan error,
+) {
+	els, err := driver.FindElements(selenium.ByCSSSelector, selector)
+	if err != nil {
+		err_chan <- errors.New(fmt.Sprintf(
+			`Finding "%s": %s`, selector, err.Error(),
+		))
+		close(el_chan)
+	} else {
+		for i := 0; i < len(els); i++ {
+			el_chan <- els[i]
+		}
+		close(el_chan)
 	}
 }
 
@@ -98,19 +123,22 @@ func CheckCSSProperty(
 	element selenium.WebElement,
 	property string,
 	value string,
-	done_chan chan bool,
+	job *PromiseStream,
 	err_chan chan error,
 ) {
 	attr, err := element.CSSProperty(property)
 	if err != nil {
 		err_chan <- err
+		job.Done(false)
 	} else if (attr != value) {
 		err_chan <- errors.New(fmt.Sprintf(
 			`%s: CSS property { "%s": "%s" } failed to match value "%s"`,
 			label, property, value, attr,
 		))
+		job.Done(false)
+	} else {
+		job.Done(true)
 	}
-	done_chan <- true
 }
 
 func CheckAttribute(
@@ -118,20 +146,23 @@ func CheckAttribute(
 	el selenium.WebElement,
 	name string,
 	value string,
-	done_chan chan bool,
+	job *PromiseStream,
 	err_chan chan error,
 ) {
 	attr, err := el.GetAttribute(name)
 	if err != nil {
-		if !strings.Contains(attr, value) {
-			err_chan <- errors.New(fmt.Sprintf(
-				`%s: %s ("%s") failed ` +
-				`to contain "%s"`,
-				label, name, attr, value,
-			))
-		}
+		err_chan <- errors.New(fmt.Sprintf(
+			`%s: Failed to get attribute "%s": %s`,
+			label, name, err,
+		))
+	} else if !strings.Contains(attr, value) {
+		err_chan <- errors.New(fmt.Sprintf(
+			`%s: %s ("%s") failed ` +
+			`to contain "%s"`,
+			label, name, attr, value,
+		))
 	}
-	done_chan <- true
+	job.Done(true)
 }
 
 func GetAttribute(
@@ -147,5 +178,56 @@ func GetAttribute(
 	} else {
 		attr_chan <- attr
 	}
+}
+
+type PromiseStream struct {
+	Chan chan interface{}
+	Jobs int
+}
+
+func (worker *PromiseStream) New() *PromiseStream {
+	worker.Jobs = worker.Jobs + 1
+	return worker
+}
+
+func (worker *PromiseStream) Done(status bool) {
+	worker.Chan <- status
+}
+
+func NewPromiseStream() *PromiseStream {
+	return &PromiseStream{make(chan interface{}), 0}
+}
+
+func (worker *PromiseStream) Take(count int) (interface{}, bool) {
+	ret := make([]interface{}, 0)
+	for ; count > 0; count-- {
+		candidate, ok := <-worker.Chan
+		if !ok {
+			return ret, ok
+		}
+		ret = append(ret, candidate)
+		worker.Jobs--
+		if worker.Jobs < 1 {
+			break
+		}
+	}
+	return ret, true
+}
+
+func (worker *PromiseStream) Close() (interface{}, bool) {
+	final := make([]interface{}, 0)
+	for ; worker.Jobs > 0; worker.Jobs-- {
+		candidate, ok := <-worker.Chan
+		if !ok {
+			close(worker.Chan)
+			return final, ok
+		}
+		final = append(final, candidate)
+		if worker.Jobs < 1 {
+			close(worker.Chan)
+			break
+		}
+	}
+	return final, true
 }
 
