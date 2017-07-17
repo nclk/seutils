@@ -190,7 +190,7 @@ func (worker *PromiseStream) New() *PromiseStream {
 	return worker
 }
 
-func (worker *PromiseStream) Done(status bool) {
+func (worker *PromiseStream) Done(status interface{}) {
 	worker.Chan <- status
 }
 
