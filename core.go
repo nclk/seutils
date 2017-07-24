@@ -119,7 +119,7 @@ func GetLocation(
 }
 
 func CheckCSSProperty(
-	label string,
+	selector string,
 	element selenium.WebElement,
 	property string,
 	value string,
@@ -132,8 +132,8 @@ func CheckCSSProperty(
 		job.Done(false)
 	} else if (attr != value) {
 		err_chan <- errors.New(fmt.Sprintf(
-			`%s: CSS property { "%s": "%s" } failed to match value "%s"`,
-			label, property, value, attr,
+			`"%s": CSS property { "%s": "%s" } failed to match value "%s"`,
+			selector, property, attr, value,
 		))
 		job.Done(false)
 	} else {
