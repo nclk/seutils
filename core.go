@@ -152,13 +152,13 @@ func CheckAttribute(
 	attr, err := el.GetAttribute(name)
 	if err != nil {
 		err_chan <- errors.New(fmt.Sprintf(
-			`%s: Failed to get attribute "%s": %s`,
-			label, name, err,
+			`"%s": Failed to get attribute "%s": %s`,
+			label, name, err.Error(),
 		))
 	} else if !strings.Contains(attr, value) {
 		err_chan <- errors.New(fmt.Sprintf(
-			`%s: %s ("%s") failed ` +
-			`to contain "%s"`,
+			`"%s": attribute %s ("%s") failed ` +
+			`to equal "%s"`,
 			label, name, attr, value,
 		))
 	}
