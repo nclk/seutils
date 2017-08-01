@@ -105,13 +105,16 @@ func QuerySelectorAll(
 }
 
 func GetLocation(
+	selector string,
 	element selenium.WebElement,
 	point_chan chan *selenium.Point,
 	err_chan chan error,
 ) {
 	point, err := element.Location()
 	if err != nil {
-		err_chan <- err
+		err_chan <- fmt.Errorf(
+			`Finding location of "%s": %s`,
+			selector, err.Error())
 		close(point_chan)
 	} else {
 		point_chan <- point
